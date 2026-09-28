@@ -1,10 +1,13 @@
 package com.ownreader.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.ownreader.ui.screens.home.HomeScreen
+import com.ownreader.ui.screens.reader.ReaderScreen
 
 @Composable
 fun OwnReaderNavigation() {
@@ -17,12 +20,27 @@ fun OwnReaderNavigation() {
         composable(NavigationRoute.Home.route) {
             HomeScreen(navController = navController)
         }
+        composable(
+            route = NavigationRoute.Reader.route,
+            arguments = listOf(
+                navArgument("comicTitle") { type = NavType.StringType },
+                navArgument("folderUri") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val title = backStackEntry.arguments?.getString("comicTitle") ?: "Comic"
+            val folderUri = backStackEntry.arguments?.getString("folderUri") ?: ""
+            ReaderScreen(
+                title = title,
+                folderUri = folderUri,
+                navController = navController
+            )
+        }
     }
 }
 
 sealed class NavigationRoute(val route: String) {
     object Home : NavigationRoute("home")
     object Library : NavigationRoute("library")
-    object ComicReader : NavigationRoute("reader/{comicId}")
+    object Reader : NavigationRoute("reader/{comicTitle}/{folderUri}")
     object Settings : NavigationRoute("settings")
 }

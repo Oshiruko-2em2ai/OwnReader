@@ -1,6 +1,7 @@
 package com.ownreader.ui.screens.home
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -37,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -50,6 +52,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val folderPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -57,8 +60,7 @@ fun HomeScreen(
         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
             Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         try {
-            androidx.compose.ui.platform.LocalContext.current.contentResolver
-                .takePersistableUriPermission(uri, flags)
+            context.contentResolver.takePersistableUriPermission(uri, flags)
         } catch (_: SecurityException) {
             // Some providers do not support persistable permissions.
         }
@@ -109,7 +111,15 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(uiState.comics, key = { it.id }) { comic ->
-                        ComicCard(comic.title)
+                        ComicCard(
+                            title = comic.title,
+                            folderPath = comic.folderPath,
+                            onClick = {
+                                navController.navigate(
+                                    "reader/${Uri.encode(comic.title)}/${Uri.encode(comic.folderPath)}"
+                                )
+                            }
+                        )
                     }
                 }
             }
@@ -142,11 +152,15 @@ private fun EmptyLibrary(onAddClick: () -> Unit) {
 }
 
 @Composable
-private fun ComicCard(title: String) {
+private fun ComicCard(
+    title: String,
+    folderPath: String,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Reader screen is added in the next phase. */ },
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -171,6 +185,12 @@ private fun ComicCard(title: String) {
             Row {
                 Text("未読", style = MaterialTheme.typography.bodySmall)
             }
+            Text(
+                text = folderPath,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall
+            )
         }
     }
 }
