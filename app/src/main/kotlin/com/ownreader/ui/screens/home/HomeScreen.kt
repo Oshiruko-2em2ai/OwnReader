@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
@@ -103,6 +105,30 @@ fun HomeScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            if (uiState.recentComics.isNotEmpty()) {
+                Text(
+                    text = "最近読んだ本",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(uiState.recentComics, key = { it.id }) { comic ->
+                        RecentComicCard(
+                            title = comic.title,
+                            onClick = {
+                                navController.navigate(
+                                    "reader/${Uri.encode(comic.title)}/${Uri.encode(comic.folderPath)}"
+                                )
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             if (uiState.comics.isEmpty()) {
                 EmptyLibrary(onAddClick = { folderPicker.launch(null) })
             } else {
@@ -153,6 +179,40 @@ private fun EmptyLibrary(onAddClick: () -> Unit) {
             IconButton(onClick = onAddClick) {
                 Icon(Icons.Default.Add, contentDescription = "フォルダを追加")
             }
+        }
+    }
+}
+
+@Composable
+private fun RecentComicCard(
+    title: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(120.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Book,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = title,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }
