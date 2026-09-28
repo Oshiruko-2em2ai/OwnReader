@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,9 +38,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.ownreader.data.database.dao.ReadHistoryDao
 import com.ownreader.data.model.ReadHistory
 import com.ownreader.data.repository.ComicRepository
+import com.ownreader.data.repository.ReadHistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -129,11 +128,9 @@ fun ReaderScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .pointerInput(Unit) {
-                    detectTransformGestures(
-                        onGesture = { _, _, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 3f)
-                        }
-                    )
+                    detectTransformGestures { _, _, zoom, _ ->
+                        scale = (scale * zoom).coerceIn(1f, 3f)
+                    }
                 }
         ) {
             AsyncImage(
@@ -147,20 +144,6 @@ fun ReaderScreen(
                         scaleY = scale
                     }
             )
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 88.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(onClick = { viewModel.previousPage() }) {
-                    Text("前")
-                }
-                Button(onClick = { viewModel.nextPage() }) {
-                    Text("次")
-                }
-            }
         }
     }
 }
@@ -169,7 +152,7 @@ fun ReaderScreen(
 class ReaderViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val comicRepository: ComicRepository,
-    private val readHistoryDao: ReadHistoryDao
+    private val readHistoryRepository: ReadHistoryRepository
 ) : ViewModel() {
     private val _pages = MutableStateFlow<List<Uri>>(emptyList())
     val pages: StateFlow<List<Uri>> = _pages.asStateFlow()
@@ -189,7 +172,7 @@ class ReaderViewModel @Inject constructor(
             val comic = comicRepository.getComicByFolderPath(folderUriString).firstOrNull()
             currentComicId = comic?.id
             val savedPage = if (comic != null) {
-                readHistoryDao.getByComicId(comic.id).firstOrNull()?.lastReadPageNumber ?: 0
+                readHistoryRepository.getByComicId(comic.id).firstOrNull()?.lastReadPageNumber ?: 0
             } else {
                 0
             }
@@ -221,9 +204,9 @@ class ReaderViewModel @Inject constructor(
     private fun persistPageProgress(pageIndex: Int) {
         val comicId = currentComicId ?: return
         viewModelScope.launch {
-            val existing = readHistoryDao.getByComicId(comicId).firstOrNull()
+            val existing = readHistoryRepository.getByComicId(comicId).firstOrNull()
             if (existing == null) {
-                readHistoryDao.insert(
+                readHistoryRepository.insertReadHistory(
                     ReadHistory(
                         comicId = comicId,
                         lastReadPageNumber = pageIndex,
@@ -231,7 +214,7 @@ class ReaderViewModel @Inject constructor(
                     )
                 )
             } else {
-                readHistoryDao.update(
+                readHistoryRepository.updateReadHistory(
                     existing.copy(
                         lastReadPageNumber = pageIndex,
                         lastReadAt = System.currentTimeMillis()
@@ -254,7 +237,7 @@ class ReaderViewModel @Inject constructor(
             isImageFile(name) -> out.add(documentFile.uri)
             name.endsWith(".zip") -> out.addAll(extractZipImages(documentFile.uri))
             name.endsWith(".rar") -> {
-                // RAR support is planned for a future phase. Keep as a no-op for now.
+                // RAR support is planned for a future phase.
             }
         }
     }

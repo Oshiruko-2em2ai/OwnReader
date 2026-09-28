@@ -16,9 +16,8 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-
-    @Singleton
     @Provides
+    @Singleton
     fun provideAppDatabase(
         @ApplicationContext context: Context
     ): AppDatabase {
@@ -29,21 +28,15 @@ object DatabaseModule {
         ).build()
     }
 
-    @Singleton
     @Provides
-    fun provideComicDao(database: AppDatabase): ComicDao {
-        return database.comicDao()
-    }
+    @Singleton
+    fun provideComicDao(db: AppDatabase): ComicDao = db.comicDao()
 
-    @Singleton
     @Provides
-    fun providePageDao(database: AppDatabase): PageDao {
-        return database.pageDao()
-    }
+    @Singleton
+    fun providePageDao(db: AppDatabase): PageDao = db.pageDao()
 
-    @Singleton
     @Provides
-    fun provideReadHistoryDao(database: AppDatabase): ReadHistoryDao {
-        return database.readHistoryDao()
-    }
+    @Singleton
+    fun provideReadHistoryDao(db: AppDatabase): ReadHistoryDao = db.readHistoryDao()
 }
