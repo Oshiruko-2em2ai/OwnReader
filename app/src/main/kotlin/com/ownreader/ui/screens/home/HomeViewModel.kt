@@ -5,18 +5,19 @@ import androidx.lifecycle.viewModelScope
 import com.ownreader.data.model.Comic
 import com.ownreader.data.repository.ComicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val comicRepository: ComicRepository
 ) : ViewModel() {
-    private val query = kotlinx.coroutines.flow.MutableStateFlow("")
+    private val query = MutableStateFlow("")
 
     val uiState: StateFlow<HomeUiState> = combine(
         comicRepository.getAllComics(),

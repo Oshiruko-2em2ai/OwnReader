@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,12 +58,11 @@ fun HomeScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         try {
             context.contentResolver.takePersistableUriPermission(uri, flags)
         } catch (_: SecurityException) {
-            // Some providers do not support persistable permissions.
+            // Ignore if the provider doesn't support persistable permissions.
         }
         viewModel.addFolder(
             uri = uri.toString(),
@@ -72,7 +72,14 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("OwnReader") })
+            TopAppBar(
+                title = { Text("OwnReader") },
+                actions = {
+                    IconButton(onClick = { navController.navigate("settings") }) {
+                        Icon(Icons.Default.Settings, contentDescription = "設定")
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { folderPicker.launch(null) }) {
@@ -113,7 +120,6 @@ fun HomeScreen(
                     items(uiState.comics, key = { it.id }) { comic ->
                         ComicCard(
                             title = comic.title,
-                            folderPath = comic.folderPath,
                             onClick = {
                                 navController.navigate(
                                     "reader/${Uri.encode(comic.title)}/${Uri.encode(comic.folderPath)}"
@@ -154,7 +160,6 @@ private fun EmptyLibrary(onAddClick: () -> Unit) {
 @Composable
 private fun ComicCard(
     title: String,
-    folderPath: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -185,12 +190,6 @@ private fun ComicCard(
             Row {
                 Text("未読", style = MaterialTheme.typography.bodySmall)
             }
-            Text(
-                text = folderPath,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall
-            )
         }
     }
 }
