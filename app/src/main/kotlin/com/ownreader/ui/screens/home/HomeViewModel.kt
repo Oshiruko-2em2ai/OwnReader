@@ -27,26 +27,12 @@ class HomeViewModel @Inject constructor(
         query
     ) { comics, history, searchQuery ->
         val recentIds = history.map { it.comicId }.distinct()
-        val recentComics = comics
-            .filter { it.id in recentIds }
-            .sortedBy { recentIds.indexOf(it.id) }
-            .take(5)
-
-        val filtered = if (searchQuery.isBlank()) {
-            comics
-        } else {
-            comics.filter { it.title.contains(searchQuery, ignoreCase = true) }
+        val recent = recentIds.mapNotNull { id -> comics.firstOrNull { it.id == id } }.take(5)
+        val filtered = comics.filter { comic ->
+            searchQuery.isBlank() || comic.title.contains(searchQuery, ignoreCase = true)
         }
-        HomeUiState(
-            comics = filtered,
-            query = searchQuery,
-            recentComics = recentComics
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState()
-    )
+        HomeUiState(comics = filtered, recentComics = recent, query = searchQuery)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     fun setQuery(value: String) {
         query.value = value
@@ -54,6 +40,7 @@ class HomeViewModel @Inject constructor(
 
     fun addFolder(uri: String, title: String) {
         viewModelScope.launch {
+            if (comicRepository.getComicByFolderPath(uri).stateIn(this).value != null) return@launch
             comicRepository.insertComic(
                 Comic(
                     title = title.ifBlank { "無題のコミック" },
@@ -66,6 +53,6 @@ class HomeViewModel @Inject constructor(
 
 data class HomeUiState(
     val comics: List<Comic> = emptyList(),
-    val query: String = "",
-    val recentComics: List<Comic> = emptyList()
+    val recentComics: List<Comic> = emptyList(),
+    val query: String = ""
 )

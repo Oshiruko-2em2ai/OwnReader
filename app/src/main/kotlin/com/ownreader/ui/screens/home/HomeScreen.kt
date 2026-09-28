@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -38,6 +39,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,22 +55,20 @@ fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val folderPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
+        ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        try {
-            context.contentResolver.takePersistableUriPermission(uri, flags)
-        } catch (_: SecurityException) {
-            // Ignore if the provider doesn't support persistable permissions.
+        if (uri != null) {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }
+            viewModel.addFolder(uri.toString(), uri.lastPathSegment?.substringAfterLast(':').orEmpty())
         }
-        viewModel.addFolder(
-            uri = uri.toString(),
-            title = uri.lastPathSegment?.substringAfterLast(':').orEmpty()
-        )
+    }
+
+    fun openComic(comic: com.ownreader.data.model.Comic) {
+        navController.navigate("reader/${Uri.encode(comic.title)}/${Uri.encode(comic.folderPath)}")
     }
 
     Scaffold(
@@ -88,70 +87,44 @@ fun HomeScreen(
                 Icon(Icons.Default.Add, contentDescription = "コミックを追加")
             }
         }
-    ) { innerPadding ->
+    ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
         ) {
             OutlinedTextField(
-                value = uiState.query,
+                value = state.query,
                 onValueChange = viewModel::setQuery,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 placeholder = { Text("コミックを検索") }
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-            if (uiState.recentComics.isNotEmpty()) {
-                Text(
-                    text = "最近読んだ本",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp)
-                ) {
-                    items(uiState.recentComics, key = { it.id }) { comic ->
-                        RecentComicCard(
-                            title = comic.title,
-                            onClick = {
-                                navController.navigate(
-                                    "reader/${Uri.encode(comic.title)}/${Uri.encode(comic.folderPath)}"
-                                )
-                            }
-                        )
+            if (state.recentComics.isNotEmpty()) {
+                Text("最近読んだ本", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(state.recentComics, key = { it.id }) { comic ->
+                        ComicCard(comic.title, Modifier.width(140.dp)) { openComic(comic) }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
             }
 
-            if (uiState.comics.isEmpty()) {
-                EmptyLibrary(onAddClick = { folderPicker.launch(null) })
+            Text("ライブラリ (${state.comics.size})", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            if (state.comics.isEmpty()) {
+                EmptyLibrary { folderPicker.launch(null) }
             } else {
-                Text(
-                    text = "ライブラリ (${uiState.comics.size})",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 140.dp),
+                    columns = GridCells.Adaptive(140.dp),
                     contentPadding = PaddingValues(bottom = 88.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.comics, key = { it.id }) { comic ->
-                        ComicCard(
-                            title = comic.title,
-                            onClick = {
-                                navController.navigate(
-                                    "reader/${Uri.encode(comic.title)}/${Uri.encode(comic.folderPath)}"
-                                )
-                            }
-                        )
+                    items(state.comics, key = { it.id }) { comic ->
+                        ComicCard(comic.title, Modifier.fillMaxWidth()) { openComic(comic) }
                     }
                 }
             }
@@ -160,96 +133,29 @@ fun HomeScreen(
 }
 
 @Composable
-private fun EmptyLibrary(onAddClick: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+private fun EmptyLibrary(onAdd: () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Book,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            Icon(Icons.Default.Book, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(12.dp))
             Text("コミックがありません", style = MaterialTheme.typography.titleMedium)
-            Text("右下の＋からフォルダを追加してください")
-            Spacer(modifier = Modifier.height(12.dp))
-            IconButton(onClick = onAddClick) {
-                Icon(Icons.Default.Add, contentDescription = "フォルダを追加")
-            }
+            Text("＋からフォルダを追加してください")
+            IconButton(onClick = onAdd) { Icon(Icons.Default.Add, "フォルダを追加") }
         }
     }
 }
 
 @Composable
-private fun RecentComicCard(
-    title: String,
-    onClick: () -> Unit
-) {
+private fun ComicCard(title: String, modifier: Modifier, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .width(120.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+        modifier = modifier.clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.Book,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelLarge
-            )
-        }
-    }
-}
-
-@Composable
-private fun ComicCard(
-    title: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.Book,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleSmall
-            )
-            Row {
-                Text("未読", style = MaterialTheme.typography.bodySmall)
-            }
+        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.Book, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row { Text("続きから読む", style = MaterialTheme.typography.bodySmall) }
         }
     }
 }

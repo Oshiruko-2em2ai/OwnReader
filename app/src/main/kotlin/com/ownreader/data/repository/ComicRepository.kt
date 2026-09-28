@@ -8,31 +8,19 @@ import javax.inject.Inject
 class ComicRepository @Inject constructor(
     private val comicDao: ComicDao
 ) {
-    suspend fun insertComic(comic: Comic): Long {
-        return comicDao.insert(comic)
-    }
+    suspend fun insertComic(comic: Comic): Long = comicDao.insert(comic)
 
-    suspend fun updateComic(comic: Comic) {
-        comicDao.update(comic)
-    }
+    suspend fun updateComic(comic: Comic) = comicDao.update(comic)
 
-    suspend fun deleteComic(comic: Comic) {
-        comicDao.delete(comic)
-    }
+    suspend fun deleteComic(comic: Comic) = comicDao.delete(comic)
 
-    fun getComicById(id: Long): Flow<Comic?> {
-        return comicDao.getById(id)
-    }
+    fun getComicById(id: Long): Flow<Comic?> = comicDao.getById(id)
 
-    fun getComicByFolderPath(folderPath: String): Flow<Comic?> {
-        return comicDao.getByFolderPath(folderPath)
-    }
+    fun getComicByFolderPath(folderPath: String): Flow<Comic?> =
+        comicDao.getByFolderPath(folderPath)
 
-    fun getAllComics(): Flow<List<Comic>> {
-        return comicDao.getAllComics()
-    }
+    fun getAllComics(): Flow<List<Comic>> = comicDao.getAllComics()
 
-    fun searchComicsByTitle(query: String): Flow<List<Comic>> {
-        return comicDao.searchByTitle(query)
-    }
+    fun searchComicsByTitle(query: String): Flow<List<Comic>> =
+        comicDao.searchByTitle(query)
 }
