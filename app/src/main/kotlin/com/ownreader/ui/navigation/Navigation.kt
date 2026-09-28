@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ownreader.ui.screens.home.HomeScreen
 import com.ownreader.ui.screens.reader.ReaderScreen
+import com.ownreader.ui.screens.settings.SettingsScreen
 
 @Composable
 fun OwnReaderNavigation() {
@@ -34,6 +35,9 @@ fun OwnReaderNavigation() {
                 folderUri = folderUri,
                 navController = navController
             )
+        }
+        composable(NavigationRoute.Settings.route) {
+            SettingsScreen(navController = navController)
         }
     }
 }
