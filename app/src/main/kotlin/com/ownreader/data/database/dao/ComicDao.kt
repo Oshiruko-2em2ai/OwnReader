@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ComicDao {
     @Insert
-    suspend fun insert(comic: Comic)
+    suspend fun insert(comic: Comic): Long
 
     @Update
     suspend fun update(comic: Comic)
@@ -21,6 +21,9 @@ interface ComicDao {
 
     @Query("SELECT * FROM comics WHERE id = :id")
     fun getById(id: Long): Flow<Comic?>
+
+    @Query("SELECT * FROM comics WHERE folderPath = :folderPath LIMIT 1")
+    fun getByFolderPath(folderPath: String): Flow<Comic?>
 
     @Query("SELECT * FROM comics ORDER BY title ASC")
     fun getAllComics(): Flow<List<Comic>>
