@@ -21,16 +21,14 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Generate Gradle wrapper with compatible version
-        run: |
-          gradle wrapper --gradle-version 8.2
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
-      - name: Build debug APK
+      - name: Clean and build debug APK
         run: |
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build-output.log
+          ./gradlew clean assembleDebug --stacktrace 2>&1 | tee build-output.log
 
-      - name: Upload build log
+      - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
