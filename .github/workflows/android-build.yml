@@ -21,11 +21,14 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Grant Gradle wrapper execute permission
-        run: chmod +x ./gradlew
+      - name: Generate Gradle wrapper
+        run: |
+          gradle wrapper --gradle-version 8.5
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
