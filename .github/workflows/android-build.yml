@@ -17,32 +17,38 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ------------------------------------------------------------
-      # Check Gradle Wrapper files
-      # ------------------------------------------------------------
       - name: Check Gradle Wrapper files
+        shell: bash
         run: |
+          echo "=== Current directory ==="
+          pwd
+
+          echo ""
           echo "=== Repository root ==="
           ls -la
 
           echo ""
-          echo "=== gradle/wrapper directory ==="
-          ls -la gradle/wrapper || true
+          echo "=== gradle/wrapper ==="
+          ls -lah gradle/wrapper
 
           echo ""
-          echo "=== Gradle Wrapper files ==="
-          find . -name "gradle-wrapper*" -print
+          echo "=== gradle-wrapper.jar information ==="
+          file gradle/wrapper/gradle-wrapper.jar
 
           echo ""
-          echo "=== Check gradle-wrapper.jar ==="
-          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "ERROR: gradle/wrapper/gradle-wrapper.jar was not found."
-            echo "Please commit gradle-wrapper.jar to the repository."
+          echo "=== gradle-wrapper.jar size ==="
+          wc -c gradle/wrapper/gradle-wrapper.jar
+
+          echo ""
+          echo "=== Check GradleWrapperMain ==="
+          jar tf gradle/wrapper/gradle-wrapper.jar | grep "GradleWrapperMain" || {
+            echo ""
+            echo "ERROR: GradleWrapperMain was NOT found inside gradle-wrapper.jar"
             exit 1
-          fi
+          }
 
-          echo "gradle-wrapper.jar found."
-
+          echo ""
+          echo "GradleWrapperMain found."
       # ------------------------------------------------------------
       # Java
       # ------------------------------------------------------------
