@@ -25,8 +25,19 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Clean and build debug APK
+        shell: bash
         run: |
+          set -o pipefail
           ./gradlew clean assembleDebug --stacktrace 2>&1 | tee build-output.log
+
+      - name: Check generated APK
+        if: success()
+        run: |
+          echo "=== APK files ==="
+          find . -type f -name "*.apk" -print
+          echo ""
+          echo "=== app/build/outputs ==="
+          find app/build/outputs -type f -print || true
 
       - name: Upload build log on failure
         if: failure()
@@ -41,3 +52,4 @@ jobs:
         with:
           name: ownreader-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
